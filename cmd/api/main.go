@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -13,6 +14,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/raymuos/survoyce/internal/config"
+	"github.com/raymuos/survoyce/internal/httpapi"
+	"github.com/raymuos/survoyce/internal/storage"
+	"github.com/raymuos/survoyce/internal/store"
 )
 
 func main() {
@@ -38,7 +42,12 @@ func run(log *slog.Logger) error {
 	}
 	defer pool.Close()
 
+	audio := storage.NewS3(cfg.S3Endpoint, cfg.S3Bucket, cfg.S3AccessKey, cfg.S3SecretKey)
+	if err := audio.EnsureBucket(ctx); err != nil {
+		return fmt.Errorf("ensure bucket: %w", err)
+	}
 	mux := http.NewServeMux()
+	httpapi.NewFeedbackHandler(store.NewPostgres(pool), audio, log).Register(mux)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		if err := pool.Ping(r.Context()); err != nil {
 			http.Error(w, "db unavailable", http.StatusServiceUnavailable)
