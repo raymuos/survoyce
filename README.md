@@ -7,7 +7,7 @@ Voice-based customer feedback pipeline: audio upload -> queue -> transcription -
 ```bash
 go mod tidy
 
-# Start Postgres, Redis, MinIO
+# Start Postgres, Redis, RustFS
 make up
 
 # Create tables
